@@ -1,0 +1,6 @@
+---
+- hosts: all
+  become: yes
+  tasks:
+  - name: Verite asbolue
+    shell: echo  "Mathis va a la salle "> /tmp/mathis
