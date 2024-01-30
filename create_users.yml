@@ -1,11 +1,17 @@
 ---
 - name: Créer un utilisateur et un groupe
-  hosts: all
+  hosts: root
 
-  vars:
-    username: mon_utilisateur
-    groupname: mon_groupe
-    default_password: my_default_password
+  vars_prompt:
+    - name: username
+      prompt: "Entrez le nom d'utilisateur à créer"
+      private: no
+    - name: groupname
+      prompt: "Entrez le nom du groupe à créer"
+      private: no
+    - name: default_password
+      prompt: "Entrez le mot de passe par défaut"
+      private: yes
 
   tasks:
     - name: Vérifier si le groupe existe
