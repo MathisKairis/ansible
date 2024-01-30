@@ -1,6 +1,6 @@
 ---
 - name: Créer un utilisateur et un groupe
-  hosts: all  
+  hosts: all
 
   vars:
     username: mon_utilisateur
@@ -9,15 +9,14 @@
 
   tasks:
     - name: Vérifier si le groupe existe
-      group_info:
-        name: "{{ groupname }}"
+      command: getent group "{{ groupname }}"
       register: group_check
-      ignore_errors: yes
+      ignore_errors: true
 
     - name: Créer le groupe s'il n'existe pas
       group:
         name: "{{ groupname }}"
-      when: group_check is failed  # Si le groupe n'existe pas
+      when: group_check.rc != 0  # Si le groupe n'existe pas
 
     - name: Créer l'utilisateur
       user:
@@ -25,13 +24,12 @@
         password: "{{ default_password | password_hash('sha512') }}"
         groups: "{{ groupname }}"
         shell: /bin/bash
-        append: yes  # Ajoute l'utilisateur au groupe sans supprimer les groupes existants
+        append: yes
         state: present
 
     - name: Définir l'utilisateur comme utilisateur standard
-      become: yes
       user:
         name: "{{ username }}"
         shell: /bin/bash
-        append: yes  # Ajoute l'utilisateur au groupe sans supprimer les groupes existants
+        append: yes
         groups: "{{ groupname }}"
