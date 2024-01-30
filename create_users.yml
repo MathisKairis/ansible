@@ -14,10 +14,23 @@
       register: groups_output
       changed_when: false
 
-    - name: Print User Information
-      debug:
-        var: users_output.stdout_lines
+    - name: Format User Information
+      set_fact:
+        user_list: "{{ users_output.stdout_lines | map('regex_replace', '^([^:]+):.*', '\\1') | list }}"
 
-    - name: Print Group Information
+    - name: Format Group Information
+      set_fact:
+        group_list: "{{ groups_output.stdout_lines | map('regex_replace', '^([^:]+):.*', '\\1') | list }}"
+
+    - name: Print Information
       debug:
-        var: groups_output.stdout_lines
+        msg: |
+          Users:
+          {% for user in user_list %}
+            - {{ user }}
+          {% endfor %}
+
+          Groups:
+          {% for group in group_list %}
+            - {{ group }}
+          {% endfor %}
