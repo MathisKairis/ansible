@@ -1,14 +1,25 @@
-- name: Update web servers
+---
+- name: Mise à jour et redémarrage des serveurs
   hosts: all
   become: yes
 
   tasks:
-  - name: Ensure apache is at the latest version
-    ansible.builtin.yum:
-      name: httpd
-      state: latest
+    - name: Mise à jour des paquets
+      apt:
+        update_cache: yes
+        upgrade: yes
+      register: update_result
 
-  - name: Write the apache config file
-    ansible.builtin.template:
-      src: /srv/httpd.j2
-      dest: /etc/httpd.conf
+    - name: Redémarrage des serveurs
+      reboot:
+      when: update_result.changed
+
+    - name: Affichage du message de succès
+      debug:
+        msg: "Mise à jour et redémarrage ont réussi."
+      when: update_result.changed
+
+    - name: Affichage du message en cas d'échec
+      debug:
+        msg: "Échec de la mise à jour ou aucun changement nécessaire."
+      when: not update_result.changed
