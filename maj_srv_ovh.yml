@@ -1,0 +1,42 @@
+---
+- name: Mise à jour des serveurs
+  hosts: all
+  become: yes
+  tasks:
+    - name: Mise à jour des paquets
+      apt:
+        upgrade: yes
+        update_cache: yes
+      register: apt_update_output
+      changed_when: apt_update_output.stdout != ""
+
+    - name: Vérification des paquets à exclure
+      shell: dpkg --get-selections | grep "\<{{ item }}\>"
+      loop:
+        - kernel
+        - wireguard
+        - libc
+        - python
+        - java
+      register: excluded_packages_output
+      ignore_errors: true
+
+    - name: Mise à jour des paquets sauf ceux exclus
+      apt:
+        name: "*"
+        state: latest
+        update_cache: yes
+      when: "'{{ item }}' not in excluded_packages_output.stdout"
+      loop: "{{ ansible_facts['distribution'] == 'Ubuntu' or ansible_facts['distribution'] == 'Debian' }}"
+      register: updated_packages
+      changed_when: updated_packages.stdout != ""
+
+    - name: Affichage des paquets exclus
+      debug:
+        msg: "Les paquets suivants doivent être mis à jour manuellement : {{ excluded_packages_output.results | map(attribute='item') | map(attribute='item') | select('string') | list }}"
+      when: excluded_packages_output.results | selectattr('rc', 'ne', 0) | list | length > 0
+
+    - name: Affichage des paquets mis à jour
+      debug:
+        msg: "Les paquets suivants ont été mis à jour : {{ updated_packages | json_query('results[].item') }}"
+      when: updated_packages.results | selectattr('changed', 'defined') | list | length > 0
