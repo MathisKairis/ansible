@@ -1,0 +1,39 @@
+---
+- name: Configure MySQL Server
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install MySQL Server
+      apt:
+        name: mysql-server
+        state: present
+
+    - name: Copy MySQL configuration
+      template:
+        src: mysql.cnf.j2
+        dest: /etc/mysql/mysql.conf.d/mysqld.cnf
+      notify: Restart MySQL
+
+    - name: Ensure MySQL service is running
+      service:
+        name: mysql
+        state: started
+        enabled: yes
+
+    - name: Create database
+      mysql_db:
+        name: mathis
+        state: present
+
+    - name: Create MySQL user
+      mysql_user:
+        name: wisper
+        password: root  
+        priv: 'wisper.*:ALL'
+        state: present
+
+  handlers:
+    - name: Restart MySQL
+      service:
+        name: mysql
+        state: restarted
