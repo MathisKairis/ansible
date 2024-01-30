@@ -1,6 +1,6 @@
 ---
 - name: Créer un utilisateur et un groupe
-  hosts: root
+  hosts: all
 
   vars_prompt:
     - name: username
