@@ -1,6 +1,6 @@
 ---
 - name: Créer un utilisateur et un groupe
-  hosts: localhost  # Vous pouvez spécifier les hôtes cibles selon votre configuration
+  hosts: all  
 
   vars:
     username: mon_utilisateur
