@@ -11,7 +11,7 @@
       changed_when: apt_update_output.stdout != ""
 
     - name: Vérification des paquets à exclure
-      shell: dpkg --get-selections | grep "\<{{ item }}\>"
+      shell: dpkg --get-selections | grep "\<{{ item }}\>" || true
       loop:
         - kernel
         - wireguard
@@ -26,17 +26,17 @@
         name: "*"
         state: latest
         update_cache: yes
-      when: "'{{ item }}' not in excluded_packages_output.stdout"
-      loop: "{{ ansible_facts['distribution'] == 'Ubuntu' or ansible_facts['distribution'] == 'Debian' }}"
+      when: ansible_facts['distribution'] == 'Ubuntu' or ansible_facts['distribution'] == 'Debian' and not "'{{ item }}' in excluded_packages_output.stdout"
+      loop: "{{ ['Ubuntu', 'Debian'] }}"
       register: updated_packages
       changed_when: updated_packages.stdout != ""
 
     - name: Affichage des paquets exclus
       debug:
-        msg: "Les paquets suivants doivent être mis à jour manuellement : {{ excluded_packages_output.results | map(attribute='item') | map(attribute='item') | select('string') | list }}"
+        msg: "Les paquets suivants doivent être mis à jour manuellement : {{ excluded_packages_output.results | selectattr('rc', 'ne', 0) | map(attribute='item') | list }}"
       when: excluded_packages_output.results | selectattr('rc', 'ne', 0) | list | length > 0
 
     - name: Affichage des paquets mis à jour
       debug:
-        msg: "Les paquets suivants ont été mis à jour : {{ updated_packages | json_query('results[].item') }}"
+        msg: "Les paquets suivants ont été mis à jour : {{ updated_packages.results | selectattr('changed', 'defined') | map(attribute='item') | list }}"
       when: updated_packages.results | selectattr('changed', 'defined') | list | length > 0
