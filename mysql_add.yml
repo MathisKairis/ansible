@@ -5,7 +5,7 @@
   tasks:
     - name: Install MySQL Server
       apt:
-        name: mysql-server
+        name: mariadb-server
         state: present
 
     - name: Copy MySQL configuration
