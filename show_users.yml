@@ -1,4 +1,3 @@
----
 - name: Collect User and Group Information
   hosts: all
   gather_facts: yes
@@ -16,7 +15,7 @@
 
     - name: Format User Information
       set_fact:
-        user_list: "{{ users_output.stdout_lines | map('regex_replace', '^([^:]+):.*', '\\1') | list }}"
+        user_list: "{{ users_output.stdout_lines | map('regex_replace', '^([^:]+):.*', '\\1') | list | sort }}"
 
     - name: Format Group Information
       set_fact:
