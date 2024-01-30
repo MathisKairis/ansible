@@ -1,41 +1,23 @@
 ---
-- name: Créer un utilisateur et un groupe
+- name: Collect User and Group Information
   hosts: all
-
-  vars_prompt:
-    - name: username
-      prompt: "Entrez le nom d'utilisateur à créer"
-      private: no
-    - name: groupname
-      prompt: "Entrez le nom du groupe à créer"
-      private: no
-    - name: default_password
-      prompt: "Entrez le mot de passe par défaut"
-      private: yes
+  gather_facts: yes
 
   tasks:
-    - name: Vérifier si le groupe existe
-      command: getent group "{{ groupname }}"
-      register: group_check
-      ignore_errors: true
+    - name: Get Users
+      shell: getent passwd
+      register: users_output
+      changed_when: false
 
-    - name: Créer le groupe s'il n'existe pas
-      group:
-        name: "{{ groupname }}"
-      when: group_check.rc != 0  # Si le groupe n'existe pas
+    - name: Get Groups
+      shell: getent group
+      register: groups_output
+      changed_when: false
 
-    - name: Créer l'utilisateur
-      user:
-        name: "{{ username }}"
-        password: "{{ default_password | password_hash('sha512') }}"
-        groups: "{{ groupname }}"
-        shell: /bin/bash
-        append: yes
-        state: present
+    - name: Print User Information
+      debug:
+        var: users_output.stdout_lines
 
-    - name: Définir l'utilisateur comme utilisateur standard
-      user:
-        name: "{{ username }}"
-        shell: /bin/bash
-        append: yes
-        groups: "{{ groupname }}"
+    - name: Print Group Information
+      debug:
+        var: groups_output.stdout_lines
