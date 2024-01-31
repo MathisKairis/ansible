@@ -20,7 +20,7 @@
     - name: display_updated_packages
       debug:
         msg: |
-          {% if upgrade_result.stdout_lines | length > 0 %}
+          {% if upgrade_result.changed %}
           List of updated packages: {{ upgrade_result.stdout_lines }}
           {% else %}
           Aucune mise à jour.
