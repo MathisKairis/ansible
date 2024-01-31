@@ -1,0 +1,35 @@
+---
+- name: MAJ
+  hosts: all
+  become: true
+  tasks:
+    - name: Update apt repo and cache on all systems
+      apt:
+        update_cache: yes
+        force_apt_get: yes
+        cache_valid_time: 3600
+      register: apt_update_output
+
+    - name: Check if specific packages need update
+      set_fact:
+        packages_to_update: "{{ ['kernel', 'wireguard', 'libc', 'python', 'java'] }}"
+      when: "'packages_to_update' not in hostvars"
+
+    - name: Check if specific packages need update and exclude them from upgrade
+      set_fact:
+        packages_to_exclude: "{{ packages_to_update | intersect(apt_update_output|json_query('stdout_lines[0]')) }}"
+      when: packages_to_update is defined and packages_to_update | length > 0
+
+    - name: Upgrade all packages on servers excluding specific packages
+      apt:
+        upgrade: dist
+        force_apt_get: yes
+        state: latest
+        cache_valid_time: 3600
+        exclude: "{{ packages_to_exclude }}"
+      register: apt_upgrade_output
+
+    - name: Notify packages not updated
+      debug:
+        msg: "The following packages were not updated: {{ packages_to_exclude }}"
+      when: packages_to_exclude | length > 0
