@@ -19,4 +19,9 @@
   handlers:
     - name: display_updated_packages
       debug:
-        msg: "List of updated packages: {{ upgrade_result.stdout_lines }}"
+        msg: |
+          {% if upgrade_result.stdout_lines | length > 0 %}
+          List of updated packages: {{ upgrade_result.stdout_lines }}
+          {% else %}
+          Aucune mise à jour.
+          {% endif %}
