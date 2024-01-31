@@ -25,4 +25,3 @@
     - name: display_updated_packages_debug
       debug:
         msg: "upgrade_result.changed: {{ upgrade_result.changed }}"
-      verbosity: 2
