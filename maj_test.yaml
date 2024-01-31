@@ -1,56 +1,20 @@
 - name: MAJ
   hosts: all
   become: true
-  tasks:
-    - name: Debugging - Current packages
-      debug:
-        msg: "Current packages installed on the system are {{ ansible_facts.packages }}"
-
-    - name: Update apt repo and cache on all systems
-      apt:
-        update_cache: yes
-        force_apt_get: yes
-        cache_valid_time: 3600
-      register: apt_update_output
-
-    - name: Debugging - Apt update output
-      debug:
-        var: apt_update_output
-
-    - name: Check if specific packages need update
-      set_fact:
-        packages_to_update: "{{ ['kernel', 'wireguard', 'libc', 'python', 'java'] }}"
-      when: "'packages_to_update' not in hostvars"
-
-    - name: Debugging - Packages to update
-      debug:
-        msg: "Packages to update: {{ packages_to_update }}"
-
-    - name: Check if specific packages need update and exclude them from upgrade
-      set_fact:
-        packages_to_exclude: "{{ packages_to_update | default([]) | intersect(apt_update_output|json_query('stdout_lines[0]') | default([])) }}"
-      when: packages_to_update is defined and apt_update_output.stdout_lines | default([]) | length > 0
-
-    - name: Debugging - Packages to exclude
-      debug:
-        msg: "Packages to exclude: {{ packages_to_exclude }}"
-      when: packages_to_update is defined and apt_update_output.stdout_lines | default([]) | length > 0
-
-    - name: Upgrade all packages on servers excluding specific packages
-      apt:
-        upgrade: dist
-        force_apt_get: yes
-        state: latest
-        cache_valid_time: 3600
-        exclude: "{{ packages_to_exclude | default([]) }}"
-      register: apt_upgrade_output
-      when: packages_to_exclude | default([]) | length > 0
-
-    - name: Debugging - Apt upgrade output
-      debug:
-        var: apt_upgrade_output
-
-    - name: Notify packages not updated
-      debug:
-        msg: "The following packages were not updated: {{ packages_to_exclude | default([]) }}"
-      when: packages_to_exclude | default([]) | length > 0
+   tasks:
+    - name: Update apt repo and cache on all Debian/Ubuntu boxes
+      apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
+    - name: Upgrade all packages on servers
+      apt: upgrade=dist force_apt_get=yes
+    - name: Check if a reboot is needed on all servers
+      register: reboot_required_file
+      stat: path=/var/run/reboot-required get_md5=no
+    - name: Reboot the box if kernel updated
+      reboot:
+        msg: "Reboot initiated by Ansible for kernel updates"
+        connect_timeout: 5
+        reboot_timeout: 300
+        pre_reboot_delay: 0
+        post_reboot_delay: 30
+        test_command: uptime
+      when: reboot_required_file.stat.exists
