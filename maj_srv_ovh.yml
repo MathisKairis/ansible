@@ -14,14 +14,15 @@
         upgrade: dist
         force_apt_get: yes
       register: upgrade_result
-      notify: display_updated_packages
+      notify: display_updated_packages_debug
 
   handlers:
     - name: display_updated_packages
       debug:
         msg: |
-          {% if upgrade_result.changed %}
           List of updated packages: {{ upgrade_result.stdout_lines }}
-          {% else %}
-          Aucune mise à jour.
-          {% endif %}
+
+    - name: display_updated_packages_debug
+      debug:
+        msg: "upgrade_result.changed: {{ upgrade_result.changed }}"
+      verbosity: 2
