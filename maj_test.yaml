@@ -26,10 +26,11 @@
         force_apt_get: yes
         state: latest
         cache_valid_time: 3600
-        exclude: "{{ packages_to_exclude }}"
+        exclude: "{{ packages_to_exclude | default([]) }}"
       register: apt_upgrade_output
+      when: packages_to_exclude | default([]) | length > 0
 
     - name: Notify packages not updated
       debug:
-        msg: "The following packages were not updated: {{ packages_to_exclude }}"
+        msg: "The following packages were not updated: {{ packages_to_exclude | default([]) }}"
       when: packages_to_exclude | default([]) | length > 0
