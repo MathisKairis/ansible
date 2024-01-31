@@ -1,6 +1,5 @@
----
 - name: MAJ
-  hosts: test1
+  hosts: all
   become: true
   tasks:
     - name: Update apt repo and cache on all systems
