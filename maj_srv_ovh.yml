@@ -12,16 +12,4 @@
     - name: Upgrade all packages on servers
       apt:
         upgrade: dist
-        force_apt_get: yes
-      register: upgrade_result
-      notify: display_updated_packages_debug
-
-  handlers:
-    - name: display_updated_packages
-      debug:
-        msg: |
-          List of updated packages: {{ upgrade_result.stdout_lines }}
-
-    - name: display_updated_packages_debug
-      debug:
-        msg: "upgrade_result.changed: {{ upgrade_result.changed }}"
+        force_apt_get
