@@ -1,6 +1,7 @@
 ---
 - hosts: all
   become: yes
+  become_user: ec2-user
   tasks:
-  - name: Verite asbolue
-    shell: echo  "Mathis va a la salle "> /tmp/mathis
+    - name: Verite absolue
+      shell: echo "Mathis va a la salle" > /tmp/mathis
