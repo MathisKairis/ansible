@@ -1,5 +1,5 @@
 - name: MAJ
-  hosts: OVH
+  hosts: all
   become: true
   tasks:
     - name: Update apt repo and cache on all Debian/Ubuntu boxes
