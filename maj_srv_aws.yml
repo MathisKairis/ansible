@@ -1,0 +1,8 @@
+- name: MAJ
+  hosts: AWS
+  become: true
+  tasks:
+    - name: Update yum repo and cache on all CentOS/Red Hat boxes
+      yum:
+        name: '*'
+        state: latest
