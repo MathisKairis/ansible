@@ -1,0 +1,7 @@
+---
+- name: Test de connexion avec ping
+  hosts: all
+  become: yes
+  tasks:
+    - name: Vérifier la connexion avec ping
+      ping:
