@@ -8,11 +8,14 @@
         state: latest
       register: yum_output
     
-    - name: Afficher le statut des mises à jour
+    - name: Afficher la liste des paquets mis à jour
       debug:
-        var: yum_output.changed
-      
+        msg: "Aucun paquet à mettre à jour"
+      when: not yum_output.changed
+      tags: no_packages_updated
+    
     - name: Afficher la liste des paquets mis à jour
       debug:
         msg: "{{ yum_output | default('Aucun paquet à mettre à jour', true) }}"
       when: yum_output.changed
+      tags: packages_updated
