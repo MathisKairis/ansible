@@ -4,7 +4,8 @@
   tasks:
     - name: Exécuter la mise à jour des paquets
       yum:
-        name: '*'
+        name:
+          - dummy-package  # Paquet factice pour simuler la mise à jour
         state: latest
         exclude:
           - kernel
