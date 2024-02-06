@@ -10,15 +10,10 @@
     
     - name: Afficher la liste des paquets mis à jour
       debug:
-        msg: "Aucun paquet à mettre à jour"
-      when: not yum_output.changed
-      tags: no_packages_updated
-    
-    - name: Afficher la liste des paquets mis à jour
-      debug:
-        msg: "{{ yum_output | default('Aucun paquet à mettre à jour', true) }}"
-      when: yum_output.changed
-      tags: packages_updated
+        msg: "{% if not yum_output.changed %}Aucun paquet à mettre à jour{% else %}{{ yum_output | default('Aucun paquet à mettre à jour', true) }}{% endif %}"
+      tags:
+        - no_packages_updated
+        - packages_updated
 
     - name: Redémarrer les services nécessaires
       systemd:
@@ -31,5 +26,3 @@
   vars:
     excluded_services:
       - service1
-      - service2
-      # Ajoute d'autres services à exclure au besoin
