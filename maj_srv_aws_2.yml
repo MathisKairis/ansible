@@ -1,6 +1,10 @@
 - name: MAJ
   hosts: AWS
   become_user: ec2-user
+  vars:
+    services_to_exclude:
+      - service1
+      - service2
   tasks:
     - name: yum_update
       yum:
@@ -16,6 +20,20 @@
     
     - name: Afficher la liste des paquets mis à jour
       debug:
-        msg: "{{ yum_output.results | map(attribute='item') | list }}"
+        msg: "{{ yum_output | default('Aucun paquet à mettre à jour', true) }}"
       when: yum_output.changed
       tags: packages_updated
+
+    - name: Vérifier les services à redémarrer
+      shell: needs-restarting -s
+      register: services_to_restart
+      when: yum_output.changed
+      tags: check_services_to_restart
+
+    - name: Redémarrer les services
+      service:
+        name: "{{ item }}"
+        state: restarted
+      with_items: "{{ services_to_restart.stdout_lines }}"
+      when: yum_output.changed and item not in services_to_exclude
+      tags: services_restarted
