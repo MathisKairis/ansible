@@ -8,7 +8,8 @@
       pause:
         prompt: "Voulez-vous écrire un fichier random dans {{ random_file }} ? (y/n) "
       register: user_input
+      when: ansible_connection_local  # Assurez-vous que cette tâche ne s'exécute que localement
 
     - name: Écriture du fichier random
       ansible.builtin.command: echo "{{ lookup('password', '/dev/urandom chars=ascii_letters length=10') }}" > "{{ random_file }}"
-      when: user_input.user_input == 'y'
+      when: user_input.user_input == 'y' and ansible_connection_local
