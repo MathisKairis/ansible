@@ -16,20 +16,6 @@
     
     - name: Afficher la liste des paquets mis à jour
       debug:
-        msg: "{{ yum_output | default('Aucun paquet à mettre à jour', true) }}"
+        msg: "{{ yum_output.results | map(attribute='item') | list }}"
       when: yum_output.changed
       tags: packages_updated
-
-    - name: Redémarrer les services nécessaires
-      systemd:
-        name: "{{ item }}"
-        state: restarted
-      loop: "{{ ansible_services }}"
-      when: item not in excluded_services
-      ignore_errors: true
-
-  vars:
-    excluded_services:
-      - service1
-      - service2
-      # Ajoute d'autres services à exclure au besoin
