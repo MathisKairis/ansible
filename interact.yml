@@ -1,15 +1,1 @@
----
-- name: Demande d'écriture de fichier interactif
-  hosts: AWS
-  vars:
-    random_file: "/tmp/random_file.txt"  # Chemin du fichier à créer
-  tasks:
-    - name: Demande interactive
-      pause:
-        prompt: "Voulez-vous écrire un fichier random dans {{ random_file }} ? (y/n) "
-      register: user_input
-      when: ansible_connection_local | default(false)  # Utilise la variable ansible_connection_local si elle est définie
 
-    - name: Écriture du fichier random
-      ansible.builtin.command: echo "{{ lookup('password', '/dev/urandom chars=ascii_letters length=10') }}" > "{{ random_file }}"
-      when: user_input.user_input == 'y' and (ansible_connection_local | default(false))
