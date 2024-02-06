@@ -1,3 +1,6 @@
+- name: Collecter les faits sur les services
+  service_facts:
+
 - name: MAJ
   hosts: AWS
   become_user: ec2-user
@@ -7,7 +10,7 @@
         name: '*'
         state: latest
       register: yum_output
-    
+
     - name: Afficher la liste des paquets mis à jour
       debug:
         msg: "{% if not yum_output.changed %}Aucun paquet à mettre à jour{% else %}{{ yum_output | default('Aucun paquet à mettre à jour', true) }}{% endif %}"
@@ -19,10 +22,6 @@
       systemd:
         name: "{{ item }}"
         state: restarted
-      loop: "{{ ansible_services }}"
+      loop: "{{ ansible_facts.services | map(attribute='name') | list }}"
       when: item not in excluded_services
       ignore_errors: true
-
-  vars:
-    excluded_services:
-      - service1
