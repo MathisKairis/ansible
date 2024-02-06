@@ -1,10 +1,10 @@
-- name: Collecter les faits sur les services
-  service_facts:
-
 - name: MAJ
   hosts: AWS
   become_user: ec2-user
   tasks:
+    - name: Collecter les faits sur les services
+      service_facts:
+
     - name: yum_update
       yum:
         name: '*'
@@ -25,3 +25,9 @@
       loop: "{{ ansible_facts.services | map(attribute='name') | list }}"
       when: item not in excluded_services
       ignore_errors: true
+
+  vars:
+    excluded_services:
+      - service1
+      - service2
+      # Ajoute d'autres services à exclure au besoin
