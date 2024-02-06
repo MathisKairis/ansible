@@ -26,7 +26,7 @@
       systemd:
         name: "{{ item }}"
         state: restarted
-      loop: "{{ ansible_facts.services | map(attribute='name') | list }}"
+      loop: "{{ ansible_facts.services.keys() | list }}"
       when: item not in excluded_services
       ignore_errors: true
 
