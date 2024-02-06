@@ -1,15 +1,22 @@
----
-- hosts: AWS
-  vars_prompt:
-    - name: write_file
-      prompt: "Voulez-vous écrire un fichier random dans /tmp/random_file.txt ? (y/n)"
-      private: false
-
-  tasks:
-    - name: Demande interactive
-      ansible.builtin.debug:
-        msg: 'Votre choix : {{ write_file }}'
-
-    - name: Écriture du fichier random
-      ansible.builtin.command: echo "{{ lookup('password', '/dev/urandom chars=ascii_letters length=10') }}" > "/tmp/random_file.txt"
-      when: write_file | lower == 'y'
+ - hosts: AWS
+   vars_prompt:
+     - name: "age"
+       private: no
+       prompt: "Enter your age"
+     - name: "myname"
+       private: no
+       prompt: "Enter your name"
+     - name: "compname"
+       private: no
+       prompt: "Enter your company name"
+        tasks:
+   - name: "Using Debug module"
+     debug:
+       msg: "Name - {{ myname }} Age - {{ age }} CompanyName: {{ compname }} HOSTNAME - {{ inventory_hostname }}"
+   - name: "Using register"
+     shell: "find *.txt"
+     args:
+       chdir: /opt
+     register: find_output
+   - debug:
+       var: find_output
