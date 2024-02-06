@@ -5,6 +5,10 @@
     - name: Collecter les faits sur les services
       service_facts:
 
+    - name: Afficher les faits sur les services
+      debug:
+        var: ansible_facts.services
+
     - name: yum_update
       yum:
         name: '*'
