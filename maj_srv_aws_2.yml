@@ -3,8 +3,7 @@
   become_user: ec2-user
   vars:
     services_to_exclude:
-      - service1
-      - service2
+      - pm2-ubuntu
   tasks:
     - name: yum_update
       yum:
