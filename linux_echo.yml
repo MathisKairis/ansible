@@ -1,7 +1,16 @@
 ---
 - hosts: all
-  become: yes
-  become_user: ec2-user
+  vars_prompt:
+
+    - name: username
+      prompt: What is your username?
+      private: false
+
+    - name: password
+      prompt: What is your password?
+
   tasks:
-    - name: Verite absolue
-      shell: echo "Mathis va a la salle" > /tmp/mathis
+
+    - name: Print a message
+      ansible.builtin.debug:
+        msg: 'Logging in as {{ username }}'
