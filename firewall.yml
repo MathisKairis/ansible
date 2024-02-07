@@ -5,6 +5,14 @@
     firewall_ports_tcp: "{{ lookup('env','FIREWALL_PORTS_TCP') | split(',') }}"
     firewall_ports_udp: "{{ lookup('env','FIREWALL_PORTS_UDP') | split(',') }}"
   tasks:
+    - name: Afficher les ports TCP
+      debug:
+        msg: "Ports TCP à ouvrir : {{ firewall_ports_tcp }}"
+    
+    - name: Afficher les ports UDP
+      debug:
+        msg: "Ports UDP à ouvrir : {{ firewall_ports_udp }}"
+    
     - name: Installer ufw
       apt:
         name: ufw
