@@ -16,10 +16,9 @@
         state: enabled
       when: "'ufw' not in exclude_services"
 
-    - name: Ouvrir les ports nécessaires dans le pare-feu UFW
-      ufw:
-        rule: allow
-        port: "{{ item }}"
-        state: enabled
-      loop: "{{ firewall_ports }}"
-      when: "'ufw' not in exclude_services"
+- name: Ouvrir les ports nécessaires dans le pare-feu UFW
+  ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop: "{{ firewall_ports }}"
