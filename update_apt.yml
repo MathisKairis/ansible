@@ -1,0 +1,42 @@
+- name: MAJ
+  hosts: "{{ ansible_host }}"
+  become_user: "{{ ansible_user }}"
+  vars:
+    services_to_exclude: "{{ exclude_services }}"
+  tasks:
+    - name: apt_update
+      apt:
+        update_cache: yes
+      become: yes
+
+    - name: apt_upgrade
+      apt:
+        upgrade: 'yes'
+      register: apt_output
+      become: yes
+
+    - name: Afficher la liste des paquets mis à jour
+      debug:
+        msg: "Aucun paquet à mettre à jour"
+      when: not apt_output.changed
+      tags: no_packages_updated
+    
+    - name: Afficher la liste des paquets mis à jour
+      debug:
+        msg: "{{ apt_output | default('Aucun paquet à mettre à jour', true) }}"
+      when: apt_output.changed
+      tags: packages_updated
+
+    - name: Vérifier les services à redémarrer
+      shell: needs-restarting -s
+      register: services_to_restart
+      when: apt_output.changed
+      tags: check_services_to_restart
+
+    - name: Redémarrer les services
+      service:
+        name: "{{ item }}"
+        state: restarted
+      with_items: "{{ services_to_restart.stdout_lines }}"
+      when: apt_output.changed and item not in services_to_exclude
+      tags: services_restarted
