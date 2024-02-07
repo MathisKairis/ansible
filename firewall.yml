@@ -3,7 +3,7 @@
   become: yes
   become_user: "{{ ansible_user }}"
   vars:
-    firewall_ports: "{{ lookup('env','FIREWALL_PORTS') | split(',') }}"
+    firewall_ports: "{{ lookup('env','FIREWALL_PORTS').split(',') }}"
   tasks:
     - name: Installer ufw
       apt:
