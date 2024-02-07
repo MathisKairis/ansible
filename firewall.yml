@@ -19,6 +19,6 @@
 - name: Ouvrir les ports nécessaires dans le pare-feu UFW
   ufw:
     rule: allow
-    port: "{{ item }}"
+    port: '{{ item }}'
     proto: tcp
-  loop: "{{ firewall_ports }}"
+  loop: "{{ firewall_ports.split(',') }}"
