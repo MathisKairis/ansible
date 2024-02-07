@@ -1,0 +1,25 @@
+---
+- hosts: "{{ target_hosts }}"
+  become: yes
+  become_user: "{{ ansible_user }}"
+  vars:
+    firewall_ports: "{{ lookup('env','FIREWALL_PORTS').split(',') }}"
+  tasks:
+    - name: Installer ufw
+      apt:
+        name: ufw
+        state: present
+      when: "'ufw' not in exclude_services"
+
+    - name: Activer ufw
+      ufw:
+        state: enabled
+      when: "'ufw' not in exclude_services"
+
+    - name: Ouvrir les ports nécessaires dans le pare-feu UFW
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        state: enabled
+      loop: "{{ firewall_ports }}"
+      when: "'ufw' not in exclude_services"
