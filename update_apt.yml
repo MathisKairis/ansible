@@ -1,4 +1,4 @@
-- name: MAJ
+- name: MAJ apt
   hosts: "{{ ansible_host }}"
   become_user: "{{ ansible_user }}"
   vars:
