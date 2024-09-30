@@ -1,0 +1,136 @@
+- import_playbook: ../preparationServer/compilationVariables.yml
+
+# Task 1 -- Configure local tasks (get the code and compile it)
+- name: Configure local tasks (get the code and compile it)
+  hosts: localhost
+  become: yes
+  gather_facts: no
+  vars:
+    git_path: "{{ playbook_dir }}/files"
+    preparesrvok_path: "/tmp/.privatevar/{{ semaphore_vars.task_details.id }}/staticVariables.json"
+  tasks:
+    - name: Include vars
+      ansible.builtin.include_vars:
+        file: "{{ preparesrvok_path }}"
+
+    - name: Clean up the temporary directory before starting
+      file:
+        path: "{{ tmp_dir }}"
+        state: absent
+
+    - name: Ensures work tree directories exist
+      file:
+        path: "{{ item }}"
+        state: directory
+      loop:
+        - "{{ tmp_dir }}/readytofight/systemd/"
+
+    - name: Generate service and script from templates
+      ansible.builtin.template:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+      loop:
+        - { src: "{{ git_path }}/r2r3_sdwan.service.j2", dest: "{{ tmp_dir }}/readytofight/r2r3_sdwan.service" }
+        - { src: "{{ git_path }}/start.sh.j2", dest: "{{ tmp_dir }}/readytofight/start.sh" }
+
+# Task 2 -- Copy files to target servers
+- name: "Copy binary file to target servers {{ target_hosts }}"
+  hosts: "{{ target_hosts }}"
+  become: true
+  gather_facts: no
+  vars:
+    preparesrvok_path: "/tmp/.privatevar/{{ semaphore_vars.task_details.id }}/staticVariables.json"
+  tasks:
+    - name: Include vars
+      ansible.builtin.include_vars:
+        file: "{{ preparesrvok_path }}"
+
+    - name: Get CPU architecture
+      command: "uname -m"
+      register: cpu_arch
+
+    - name: Install WireGuard packages
+      package:
+        name:
+          - wireguard-tools
+          - wireguard
+          - jq
+        state: present
+
+    - name: Creates directories on target servers
+      file:
+        path: "{{ item | dirname }}"
+        state: directory
+      loop:
+        - "{{ r2r3.binpath }}"
+        - "{{ r2r3.startpath }}"
+
+    - name: Copy start.sh and R2R3Server to the target servers
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        mode: '0755'
+      loop:
+        - { src: "{{ tmp_dir }}/readytofight/start.sh", dest: "{{ r2r3.startpath }}" }
+        - { src: "{{ playbook_dir }}/../bin/arch/{{ cpu_arch.stdout }}/R2R3Server-{{ r2r3_version }}", dest: "{{ r2r3.binpath }}" }
+
+    - name: Check if the configuration file exists
+      stat:
+        path: "{{ r2r3.configDir }}/r2r3Configuration.json"
+      register: r2r3ConfigFile
+
+    - name: Create configuration with R2R3
+      environment:
+        R2R3CONFDIR: "{{ r2r3.configDir }}"
+      command: "{{ r2r3.binpath }}/services config"
+      when: r2r3ConfigFile.stat.exists == false
+
+    - name: "Update configuration r2r3"
+      command:
+        cmd: "{{ r2r3.startpath }} updateConf {{ item.var }} {{ item.value }}"
+      loop:
+          - { var: "WGDevice", value: "{{ r2r3Config.WGDevice }}" }
+          - { var: "WGDeviceListenPort", value: "{{ r2r3Config.WGDeviceListenPort }}" }
+          - { var: "WGAddrAliasMask", value: "{{ r2r3Config.WGAddrAliasMask }}" }
+          - { var: "R2ListenHttpPort", value: "{{ r2r3Config.R2ListenHttpPort }}" }
+          - { var: "CTRLListenPort", value: "{{ r2r3Config.CTRLListenPort }}" }
+          - { var: "IP6PREFIX", value: "{{ r2r3Config.IP6PREFIX }}" }
+          - { var: "IP6PREFIXCOM", value: "{{ r2r3Config.IP6PREFIXCOM }}" }
+          - { var: "IP6FORCEPREFIX", value: "{{ r2r3Config.IP6FORCEPREFIX }}" }
+          - { var: "PeerName", value: "{{ r2r3Config.PeerName }}" }
+          - { var: "PeerDesc", value: "{{ r2r3Config.PeerDesc }}" }
+          - { var: "PeerType", value: "{{ r2r3Config.PeerType }}" }
+          - { var: "WatchdogTick", value: "{{ r2r3Config.WatchdogTick }}" }
+          - { var: "ForceNatE", value: "{{ r2r3Config.ForceNatE }}" }
+          - { var: "NoOVSInteraction", value: "{{ r2r3Config.NoOVSInteraction }}" }
+      when: r2r3ConfigFile.stat.exists == false
+
+    - name: Copy systemd service file to target servers
+      ansible.builtin.template:
+        src: "{{ tmp_dir }}/readytofight/r2r3_sdwan.service"
+        dest: "/etc/systemd/system/r2r3_sdwan.service"
+        mode: '0644'
+
+    - name: Reload systemd configuration and start r2r3 service
+      block:
+        - name: Reload systemd configuration
+          systemd:
+            daemon_reexec: yes
+
+        - name: Enable and start r2r3 service
+          systemd:
+            name: "r2r3_sdwan.service"
+            enabled: yes
+            masked: no
+            state: restarted
+
+# Task 3 -- Clean up
+- name: Clean up
+  hosts: localhost
+  become: yes
+  gather_facts: no
+  tasks:
+    - name: Remove the temporary directory
+      file:
+        path: "{{ tmp_dir }}"
+        state: absent
