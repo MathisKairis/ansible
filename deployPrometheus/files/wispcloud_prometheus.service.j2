@@ -1,0 +1,15 @@
+[Unit]
+Description=Start wisper prometheus
+After=network-online.target
+[Service]
+Type=simple
+User={{ prometheus.sysuser }}
+Group={{ prometheus.sysgroup }}
+UMask=007
+WorkingDirectory={{ prometheus.syshome }}
+ExecStart={{ prometheus.prombinary }} --config.file="{{ prometheus.configpath }}" --web.enable-lifecycle --web.enable-admin-api --storage.tsdb.retention.size=1024MB --storage.tsdb.wal-compression --log.level=info
+Restart=on-failure
+# Configures the time to wait before service is stopped forcefully.
+TimeoutStopSec=15
+[Install]
+WantedBy=multi-user.target
