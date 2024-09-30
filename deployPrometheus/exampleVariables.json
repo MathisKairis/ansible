@@ -1,0 +1,20 @@
+{
+    "tmp_dir": "/tmp/mehdy",
+    "target_hosts": "srv1",
+    "infratag": "audit",
+    "promalert": {
+      "prometheuspath": "/root/prom/prometheus",
+      "alertmanagerpath": "/root/prom/alertmanager",
+      "prometheusdownloadurl": "https://github.com/prometheus/prometheus/releases/download/v2.51.2/prometheus-2.51.2.linux-amd64.tar.gz",
+      "alertmanagerdownloadurl": "https://github.com/prometheus/alertmanager/releases/download/v0.27.0/alertmanager-0.27.0.linux-amd64.tar.gz"
+    }
+  }
+
+
+
+  playbook vars
+  desynctype: chunkRead // chunkWrite // indexesRead // indexesWrite
+  binary_path: deployChunkstoreService/files
+  tmp_dir: /tmp/workmehdy/
+  repo_url: "git@github.com:mehdy76/testimportgit.git"
+  private_key_path: /root/.ssh/mehdygitrsa
