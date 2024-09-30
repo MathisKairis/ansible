@@ -1,0 +1,95 @@
+- hosts: "{{ target_hosts }}"
+  vars:
+    yum_updated_packages: []
+    apt_updated_packages: []
+
+  tasks:
+    - name: Update yum packages
+      block:
+        - name: YUM - Update all packages
+          command: yum -y update
+          register: yum_update_output
+          become: yes
+
+        - name: Display updated packages
+          debug:
+            msg: "{{ yum_update_output.stdout_lines }}"
+          when: "'No packages marked for update' not in yum_update_output.stdout"
+
+        - name: YUM - Check for updates
+          command: yum check-update
+          register: yum_output
+          changed_when: false
+          become: yes
+
+        - name: YUM - Display if no package has been updated
+          debug:
+            msg: "No package to update"
+          when: yum_output.stdout_lines|length == 0
+
+        - name: YUM - Collect details of updated packages
+          set_fact:
+            yum_updated_packages: "{{ yum_updated_packages + [{'host': inventory_hostname, 'packages': yum_output.stdout_lines}] }}"
+          when: yum_output.stdout_lines|length > 0
+      when: ansible_facts['pkg_mgr'] == 'yum'
+
+    - name: Update apt packages
+      block:
+        - name: APT - Hold packages
+          ansible.builtin.dpkg_selections:
+            name: "{{ item }}"
+            selection: hold
+          loop: "{{ packages_to_exclude }}"
+          become: yes
+          when: packages_to_exclude|length > 0
+
+        - name: APT - Update cache with release info change allowance
+          apt:
+            update_cache: yes
+            allow_releaseinfo_change: yes
+          become: yes
+
+        - name: APT - Upgrade packages
+          apt:
+            upgrade: 'yes'
+          register: apt_output
+          become: yes
+
+        - name: APT - Display if no package has been updated
+          debug:
+            msg: "No package to update"
+          when: not apt_output.changed
+          tags: no_packages_updated
+
+        - name: APT - Collect details of updated packages
+          set_fact:
+            apt_updated_packages: "{{ apt_updated_packages + [{'host': inventory_hostname, 'packages': apt_output.stdout_lines}] }}"
+          when: apt_output.changed
+          tags: packages_updated
+      when: ansible_facts['pkg_mgr'] == 'apt'
+
+    - name: Display summary of updated YUM packages
+      debug:
+        msg: |
+          YUM - Updated Packages Summary:
+          {% for entry in yum_updated_packages %}
+          Host: {{ entry.host }}
+          Packages:
+          {% for package in entry.packages %}
+            {{ package }}
+          {% endfor %}
+          {% endfor %}
+      when: yum_updated_packages | length > 0
+
+    - name: Display summary of updated APT packages
+      debug:
+        msg: |
+          APT - Updated Packages Summary:
+          {% for entry in apt_updated_packages %}
+          Host: {{ entry.host }}
+          Packages:
+          {% for package in entry.packages %}
+            {{ package }}
+          {% endfor %}
+          {% endfor %}
+      when: apt_updated_packages | length > 0
