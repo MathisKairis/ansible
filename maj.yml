@@ -35,14 +35,6 @@
 
     - name: Update apt packages
       block:
-        - name: APT - Hold packages
-          ansible.builtin.dpkg_selections:
-            name: "{{ item }}"
-            selection: hold
-          loop: "{{ packages_to_exclude }}"
-          become: yes
-          when: packages_to_exclude|length > 0
-
         - name: APT - Update cache with release info change allowance
           apt:
             update_cache: yes
