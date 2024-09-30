@@ -1,4 +1,4 @@
-- import_playbook: ../preparationServer/compilationVariables.yml
+- import_playbook: ../compilationVariables.yml
 
 # Task 1 -- Configure local tasks (get the code and compile it)
 - name: Configure local tasks (get the code and compile it)
@@ -9,10 +9,10 @@
     git_path: "{{ playbook_dir }}/files"
     preparesrvok_path: "/tmp/.privatevar/{{ semaphore_vars.task_details.id }}/staticVariables.json"
   tasks:
-    - name: Include vars
+    - name: Include vars from staticVariables.json
       ansible.builtin.include_vars:
         file: "{{ preparesrvok_path }}"
-
+    
     - name: Clean up the temporary directory before starting
       file:
         path: "{{ tmp_dir }}"
@@ -30,7 +30,7 @@
         src: "{{ item.src }}"
         dest: "{{ item.dest }}"
       loop:
-        - { src: "{{ git_path }}/r2r3_sdwan.service.j2", dest: "{{ tmp_dir }}/readytofight/r2r3_sdwan.service" }
+        - { src: "{{ git_path }}/wispcloud_sdwan.service.j2", dest: "{{ tmp_dir }}/readytofight/wispcloud_sdwan.service" }
         - { src: "{{ git_path }}/start.sh.j2", dest: "{{ tmp_dir }}/readytofight/start.sh" }
 
 # Task 2 -- Copy files to target servers
@@ -41,10 +41,10 @@
   vars:
     preparesrvok_path: "/tmp/.privatevar/{{ semaphore_vars.task_details.id }}/staticVariables.json"
   tasks:
-    - name: Include vars
+    - name: Include vars from staticVariables.json
       ansible.builtin.include_vars:
         file: "{{ preparesrvok_path }}"
-
+        
     - name: Get CPU architecture
       command: "uname -m"
       register: cpu_arch
@@ -62,67 +62,91 @@
         path: "{{ item | dirname }}"
         state: directory
       loop:
-        - "{{ r2r3.binpath }}"
-        - "{{ r2r3.startpath }}"
-
-    - name: Copy start.sh and R2R3Server to the target servers
+        - "{{ sdwan.binpath }}"
+        - "{{ sdwan.startpath }}"
+    
+    - name: Copy start.sh and R1R2Server to the target servers
       copy:
         src: "{{ item.src }}"
         dest: "{{ item.dest }}"
         mode: '0755'
       loop:
-        - { src: "{{ tmp_dir }}/readytofight/start.sh", dest: "{{ r2r3.startpath }}" }
-        - { src: "{{ playbook_dir }}/../bin/arch/{{ cpu_arch.stdout }}/R2R3Server-{{ r2r3_version }}", dest: "{{ r2r3.binpath }}" }
-
+        - { src: "{{ tmp_dir }}/readytofight/start.sh", dest: "{{ sdwan.startpath }}" }
+        - { src: "{{ playbook_dir }}/../bin/arch/{{ cpu_arch.stdout }}/R1R2Server-{{ sdwan_version }}", dest: "{{ sdwan.binpath }}" }
+    
     - name: Check if the configuration file exists
-      stat:
-        path: "{{ r2r3.configDir }}/r2r3Configuration.json"
+      stat: 
+        path: "{{ sdwan.configDirR1R2 }}/r1r2conf/r2r3Configuration.json"
       register: r2r3ConfigFile
 
-    - name: Create configuration with R2R3
+    - name: Create configuration with R1R2
       environment:
-        R2R3CONFDIR: "{{ r2r3.configDir }}"
-      command: "{{ r2r3.binpath }}/services config"
+        R1R2CONFDIR: "{{ sdwan.configDirR1R2 }}"
+      command: "{{ sdwan.binpath }} services config"
       when: r2r3ConfigFile.stat.exists == false
 
-    - name: "Update configuration r2r3"
+    - name: "Update configuration r1r2"
       command:
-        cmd: "{{ r2r3.startpath }} updateConf {{ item.var }} {{ item.value }}"
+        cmd: "{{ sdwan.startpath }} updateConf {{ item.var }} {{ item.value }}"
       loop:
-          - { var: "WGDevice", value: "{{ r2r3Config.WGDevice }}" }
-          - { var: "WGDeviceListenPort", value: "{{ r2r3Config.WGDeviceListenPort }}" }
-          - { var: "WGAddrAliasMask", value: "{{ r2r3Config.WGAddrAliasMask }}" }
-          - { var: "R2ListenHttpPort", value: "{{ r2r3Config.R2ListenHttpPort }}" }
-          - { var: "CTRLListenPort", value: "{{ r2r3Config.CTRLListenPort }}" }
-          - { var: "IP6PREFIX", value: "{{ r2r3Config.IP6PREFIX }}" }
-          - { var: "IP6PREFIXCOM", value: "{{ r2r3Config.IP6PREFIXCOM }}" }
-          - { var: "IP6FORCEPREFIX", value: "{{ r2r3Config.IP6FORCEPREFIX }}" }
-          - { var: "PeerName", value: "{{ r2r3Config.PeerName }}" }
-          - { var: "PeerDesc", value: "{{ r2r3Config.PeerDesc }}" }
-          - { var: "PeerType", value: "{{ r2r3Config.PeerType }}" }
-          - { var: "WatchdogTick", value: "{{ r2r3Config.WatchdogTick }}" }
-          - { var: "ForceNatE", value: "{{ r2r3Config.ForceNatE }}" }
-          - { var: "NoOVSInteraction", value: "{{ r2r3Config.NoOVSInteraction }}" }
+        - { var: "WGDevice", value: "{{ sdwan.r1r2Config.WGDevice }}" }
+        - { var: "WGDeviceListenPort", value: "{{ sdwan.r1r2Config.WGDeviceListenPort }}" }
+        - { var: "WGAddrAliasMask", value: "{{ sdwan.r1r2Config.WGAddrAliasMask }}" }
+        - { var: "R2ListenHttpPort", value: "{{ sdwan.r1r2Config.R2ListenHttpPort }}" }
+        - { var: "CTRLListenPort", value: "{{ sdwan.r1r2Config.CTRLListenPort }}" }
+        - { var: "IP6PREFIX", value: "{{ sdwan.r1r2Config.IP6PREFIX }}" }
+        - { var: "IP6PREFIXCOM", value: "{{ sdwan.r1r2Config.IP6PREFIXCOM }}" }
+        - { var: "PeerName", value: "{{ sdwan.r1r2Config.PeerName }}" }
+        - { var: "PeerDesc", value: "{{ sdwan.r1r2Config.PeerDesc }}" }
+        - { var: "PeerType", value: "{{ sdwan.r1r2Config.PeerType }}" }
+        - { var: "WatchdogTick", value: "{{ sdwan.r1r2Config.WatchdogTick }}" }
+        - { var: "ForceNatE", value: "{{ sdwan.r1r2Config.ForceNatE }}" }
+        - { var: "NoOVSInteraction", value: "{{ sdwan.r1r2Config.NoOVSInteraction }}" }
       when: r2r3ConfigFile.stat.exists == false
 
     - name: Copy systemd service file to target servers
       ansible.builtin.template:
-        src: "{{ tmp_dir }}/readytofight/r2r3_sdwan.service"
-        dest: "/etc/systemd/system/r2r3_sdwan.service"
+        src: "{{ tmp_dir }}/readytofight/wispcloud_sdwan.service"
+        dest: "/etc/systemd/system/wispcloud_sdwan.service"
         mode: '0644'
 
-    - name: Reload systemd configuration and start r2r3 service
+    - name: Reload systemd configuration and start SDWAN service
       block:
         - name: Reload systemd configuration
           systemd:
             daemon_reexec: yes
 
-        - name: Enable and start r2r3 service
+        - name: Enable and start SDWAN service
           systemd:
-            name: "r2r3_sdwan.service"
+            name: "wispcloud_sdwan.service"
             enabled: yes
             masked: no
             state: restarted
+
+    - name: Set Cloudflare DNS record
+      block:
+        - name: "Get local IPv6 address fcf0"
+          shell: "ip -6 addr show dev {{ sdwan.r1r2Config.WGDevice }} | grep 'fcf0' | awk '{print $2}' | cut -d'/' -f1"
+          register: local_ipv6_fcf0
+
+        - name: "Get WG PublicKey"
+          shell: "wg show {{ sdwan.r1r2Config.WGDevice }} public-key"
+          register: wg_public_key
+
+        - name: "Set WG IP and PublicKey"
+          set_fact:
+            wg_ip: "{{ local_ipv6_fcf0.stdout }}"
+            wg_public_key: "{{ wg_public_key.stdout }}"
+
+        - name: Create TXT record in Cloudflare
+          community.general.cloudflare_dns:
+            api_token: "{{ cloudflare_token }}"
+            zone: "{{ cloudflare_zone }}"
+            type: TXT
+            record: "r2r3-{{ infratag }}"
+            value: "\"{'ipv6':'{{ wg_ip }}','priority':'a','pubKey':'{{ wg_public_key }}'}\""
+            state: present
+      when: r2r3ConfigFile.stat.exists == false
 
 # Task 3 -- Clean up
 - name: Clean up
