@@ -35,10 +35,9 @@
 
     - name: Update apt packages
       block:
-        - name: APT - Update cache with release info change allowance
+        - name: APT - Update cache
           apt:
             update_cache: yes
-            allow_releaseinfo_change: yes
           become: yes
 
         - name: APT - Upgrade packages
