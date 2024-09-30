@@ -1,0 +1,110 @@
+- import_playbook: ../preparationServer/compilationVariables.yml
+# Part 1: Tasks to be performed locally
+- name: Run tasks locally
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  become: yes
+  vars:
+    git_path: "{{ playbook_dir }}/files"
+    preparesrvok_path: "/tmp/.privatevar/{{ semaphore_vars.task_details.id }}/staticVariables.json"
+  tasks:
+    - name: Include vars
+      ansible.builtin.include_vars:
+        file: "{{ preparesrvok_path }}"
+
+    - name: Clean up the temporary directory before starting
+      file:
+        path: "{{ tmp_dir }}"
+        state: absent
+
+    - name: Ensures work tree directories exist
+      file:
+        path: "{{ item }}"
+        state: directory
+      loop:
+        - "{{ tmp_dir }}/readytofight/systemd/"
+
+    - name: Generate prometheus configuration and services
+      ansible.builtin.template:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+      loop: 
+        - { src: "{{ git_path }}/prometheus.yml.j2", dest: "{{ tmp_dir }}/readytofight/prometheus.yml" }
+        - { src: "{{ git_path }}/wispcloud_prometheus.service.j2", dest: "{{ tmp_dir }}/readytofight/wispcloud_prometheus.service" }
+
+    - name: Copy rules file
+      copy:
+        src: "{{ git_path }}/first_rules.yml"
+        dest: "{{ tmp_dir }}/readytofight/first_rules.yml"         
+
+- name: Copy binary file to target servers
+  hosts: "{{ target_hosts }}"
+  become: true
+  gather_facts: no
+  vars:
+    preparesrvok_path: "/tmp/.privatevar/{{ semaphore_vars.task_details.id }}/staticVariables.json"
+  tasks:
+    - name: Include vars
+      ansible.builtin.include_vars:
+        file: "{{ preparesrvok_path }}"
+        
+    - name: get cpu architecture
+      command: "uname -m"
+      register: cpu_arch
+
+    #Install prometheus
+    - name: Install prometheus
+      apt:
+        name:
+          - prometheus
+        state: latest  
+
+    - name: Disable all prometheus services
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        enabled: no
+        state: stopped
+      loop:
+        - prometheus
+        - prometheus-node-exporter-apt
+        - prometheus-node-exporter-nvme
+        - prometheus-node-exporter
+
+    - name: Create system group"
+      ansible.builtin.group:
+        name: "{{ prometheus.sysgroup }}"
+        state: present
+
+    - name: "Create system user"
+      ansible.builtin.user:
+        name: "{{ prometheus.sysuser }}"
+        group: "{{ prometheus.sysgroup }}"
+        password: "!"
+        home: "{{ prometheus.syshome }}"
+        system: true
+      
+    - name: "Copy configurations"
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: "{{ item.owner}}"
+        group: "{{ item.group }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - { src: "{{ tmp_dir }}/readytofight/prometheus.yml", dest: "{{ prometheus.configpath }}", owner: "{{ prometheus.sysuser }}", group: "{{ prometheus.sysgroup }}", mode: '0644' }
+        - { src: "{{ tmp_dir }}/readytofight/first_rules.yml", dest: "{{ prometheus.rulespath }}", owner: "{{ prometheus.sysuser }}", group: "{{ prometheus.sysgroup }}", mode: '0644' }
+        - { src: "{{ tmp_dir }}/readytofight/wispcloud_prometheus.service", dest: "/etc/systemd/system/wispcloud_prometheus.service", owner: "{{ prometheus.sysuser }}", group: "{{ prometheus.sysgroup }}", mode: '0644' }
+
+      
+    - name: "Reload systemd" 
+      ansible.builtin.systemd:
+        daemon_reload: yes
+
+    - name: "Enable and start prometheus" 
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        enabled: yes
+        state: started
+      loop:
+        - wispcloud_prometheus
