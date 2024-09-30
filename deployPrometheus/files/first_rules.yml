@@ -1,0 +1,79 @@
+groups:
+  - name: custom_rules
+    interval: 30m
+    #limit: 48
+    rules:
+      - record: nbVmUp_byDevice
+        expr: max_over_time(count(group(byodAgentInfos{type="vm"}>=1)by(IdDevice,id))by(IdDevice,id)[30m:])
+      - record: nbAppUp_byDevice
+        expr: max_over_time(count(group(byodAgentInfos{type="app"}==1)by(IdDevice,id))by(IdDevice,id)[30m:])
+      - record: nbVmUp_byLogin
+        expr: max_over_time(count(group(byodAgentInfos{type="vm"}>=1)by(LastEmailLogin,id))by(LastEmailLogin,id)[30m:])
+      - record: nbAppUp_byLogin
+        expr: max_over_time(count(group(byodAgentInfos{type="app"}==1)by(LastEmailLogin,id))by(LastEmailLogin,id)[30m:])
+      - record: nbDeviceUp_bySite
+        expr: max_over_time(count(group(byodAgentInfos{type="device"}==1)by(LastEmailLogin,IdDevice,IdSite,type,id))by(IdSite)[30m:]) OR max_over_time(count(group(byodagent_device_state==1)by(LastEmailLogin,IdDevice,IdSite,type,id,job))by(IdSite)[30m:])
+      - record: nbUserUp_bySite
+        expr: max_over_time(count(group(byodAgentInfos{type="user"}==1)by(LastEmailLogin,IdDevice,IdSite,type,id))by(IdSite)[30m:]) OR max_over_time(count(group(byodagent_user_state==1)by(LastEmailLogin,IdDevice,IdSite,type,id,job))by(IdSite)[30m:])
+      - record: nbVmUp_bySite
+        expr: max_over_time(count(group(byodAgentInfos{type="vm"}>=1)by(LastEmailLogin,IdDevice,IdSite,type,id))by(IdSite)[30m:]) OR max_over_time(count(group(byodagent_vm_state==1)by(LastEmailLogin,IdDevice,IdSite,type,id,job))by(IdSite)[30m:])
+      - record: nbAppUp_bySite
+        expr: max_over_time(count(group(byodAgentInfos{type="app"}==1)by(LastEmailLogin,IdDevice,IdSite,type,id))by(IdSite)[30m:])
+      - record: nbUp_byLogin
+        expr: max_over_time(count(group(byodAgentInfos{type="user"}==1)by(LastEmailLogin,IdDevice,IdSite,type,id))by(LastEmailLogin)[30m:]) OR max_over_time(count(group(byodagent_user_state==1)by(LastEmailLogin,IdDevice,IdSite,type,id,job))by(LastEmailLogin)[30m:])
+      - record: nbUp_byDevice
+        expr:  max_over_time(count(group(byodAgentInfos{type="device"}==1)by(LastEmailLogin,IdDevice,IdSite,type,id))by(IdDevice)[30m:]) OR max_over_time(count(group(byodagent_device_state==1)by(LastEmailLogin,IdDevice,IdSite,type,id,job))by(IdDevice)[30m:])
+      - record: nbDeviceUp_byGroup
+        expr: max_over_time(count(group(byodAgentInfos{type="device"}==1)by(LastEmailLogin,IdDevice,IdSite,IdGroup,type,id))by(IdGroup)[30m:]) OR max_over_time(count(group(byodagent_device_state==1)by(LastEmailLogin,IdDevice,IdSite,IdGroup,type,id,job))by(IdGroup)[30m:])
+      - record: nbUserUp_byGroup
+        expr: max_over_time(count(group(byodAgentInfos{type="user"}==1)by(LastEmailLogin,IdDevice,IdSite,IdGroup,type,id))by(IdGroup)[30m:]) OR max_over_time(count(group(byodagent_user_state==1)by(LastEmailLogin,IdDevice,IdSite,IdGroup,type,id,job))by(IdGroup)[30m:])
+      - record: nbVmUp_byGroup
+        expr: max_over_time(count(group(byodAgentInfos{type="vm"}>=1)by(LastEmailLogin,IdDevice,IdSite,IdGroup,type,id))by(IdGroup)[30m:]) OR max_over_time(count(group(byodagent_vm_state==1)by(LastEmailLogin,IdDevice,IdSite,IdGroup,type,id,job))by(IdGroup)[30m:])
+      - record: nbAppUp_byGroup
+        expr: max_over_time(count(group(byodAgentInfos{type="app"}==1)by(LastEmailLogin,IdDevice,IdSite,IdGroup,type,id))by(IdGroup)[30m:])
+  - name: daily_rules
+    interval: 1d
+    rules:
+      - record: nbVmUp_byDevice_daily
+        expr: max_over_time(count(group(byodAgentInfos{type="vm"}>=1)by(IdDevice,id))by(IdDevice,id)[1d:])
+      - record: nbAppUp_byDevice_daily
+        expr: max_over_time(count(group(byodAgentInfos{type="app"}==1)by(IdDevice,id))by(IdDevice,id)[1d:])
+      - record: nbVmUp_byLogin_daily
+        expr: max_over_time(count(group(byodAgentInfos{type="vm"}>=1)by(LastEmailLogin,id))by(LastEmailLogin,id)[1d:])
+      - record: nbAppUp_byLogin_daily
+        expr: max_over_time(count(group(byodAgentInfos{type="app"}==1)by(LastEmailLogin,id))by(LastEmailLogin,id)[1d:])
+      - record: nbDeviceUp_bySite_daily
+        expr:  max_over_time(count(group(byodAgentInfos{type="device"}==1)by(LastEmailLogin,IdDevice,IdSite,type,id))by(IdSite)[1d:]) OR max_over_time(count(group(byodagent_device_state==1)by(LastEmailLogin,IdDevice,IdSite,type,id,job))by(IdSite)[1d:])
+      - record: nbUserUp_bySite_daily
+        expr: max_over_time(count(group(byodAgentInfos{type="user"}==1)by(LastEmailLogin,IdDevice,IdSite,type,id))by(IdSite)[1d:]) OR max_over_time(count(group(byodagent_user_state==1)by(LastEmailLogin,IdDevice,IdSite,type,id,job))by(IdSite)[1d:])
+      - record: nbVmUp_bySite_daily
+        expr: max_over_time(count(group(byodAgentInfos{type="vm"}>=1)by(LastEmailLogin,IdDevice,IdSite,type,id))by(IdSite)[1d:]) OR max_over_time(count(group(byodagent_vm_state==1)by(LastEmailLogin,IdDevice,IdSite,type,id,job))by(IdSite)[1d:])
+      - record: nbAppUp_bySite_daily
+        expr: max_over_time(count(group(byodAgentInfos{type="app"}==1)by(LastEmailLogin,IdDevice,IdSite,type,id))by(IdSite)[1d:])
+      - record: nbUp_byLogin_daily
+        expr: max_over_time(count(group(byodAgentInfos{type="user"}==1)by(LastEmailLogin,IdDevice,IdSite,type,id))by(LastEmailLogin)[1d:]) OR max_over_time(count(group(byodagent_user_state==1)by(LastEmailLogin,IdDevice,IdSite,type,id,job))by(LastEmailLogin)[1d:])
+      - record:  nbUp_byDevice_daily
+        expr:  max_over_time(count(group(byodAgentInfos{type="device"}==1)by(LastEmailLogin,IdDevice,IdSite,type,id))by(IdDevice)[1d:]) OR max_over_time(count(group(byodagent_device_state==1)by(LastEmailLogin,IdDevice,IdSite,type,id,job))by(IdDevice)[1d:])
+      - record: nbDeviceUp_byGroup_daily
+        expr:  max_over_time(count(group(byodAgentInfos{type="device"}==1)by(LastEmailLogin,IdDevice,IdSite,IdGroup,type,id))by(IdGroup)[1d:]) OR max_over_time(count(group(byodagent_device_state==1)by(LastEmailLogin,IdDevice,IdGroup,IdSite,type,id,job))by(IdGroup)[1d:])
+      - record: nbUserUp_byGroup_daily
+        expr: max_over_time(count(group(byodAgentInfos{type="user"}==1)by(LastEmailLogin,IdDevice,IdSite,IdGroup,type,id))by(IdGroup)[1d:]) OR max_over_time(count(group(byodagent_user_state==1)by(LastEmailLogin,IdDevice,IdSite,IdGroup,type,id,job))by(IdGroup)[1d:])
+      - record: nbVmUp_byGroup_daily
+        expr: max_over_time(count(group(byodAgentInfos{type="vm"}>=1)by(LastEmailLogin,IdDevice,IdSite,IdGroup,type,id))by(IdGroup)[1d:]) OR max_over_time(count(group(byodagent_vm_state==1)by(LastEmailLogin,IdDevice,IdSite,IdGroup,type,id,job))by(IdGroup)[1d:])
+      - record: nbAppUp_byGroup_daily
+        expr: max_over_time(count(group(byodAgentInfos{type="app"}==1)by(LastEmailLogin,IdDevice,IdSite,IdGroup,type,id))by(IdGroup)[1d:])
+  - name: AllInstances
+    interval: 30s
+    rules:
+  # Condition for alerting
+    - alert: ByodWLAgentUp2
+        # Condition for alerting
+      expr: byodAgentInfos>=1 AND ( byodAgentInfos{type="app"}==1 OR byodAgentInfos{type="vm"}>=1 OR byodAgentInfos{type="device"}==1 OR byodAgentInfos{type="user"}==1 OR byodAgentInfos{type="agent"}==1 )
+      for: 5s
+        # Annotation - additional informational labels to store more information
+      annotations:
+        title: 'Instance {{ $labels.instance }} {{ $labels.type }} byodWLAgent2  state = {{ $value }}'
+        # Labels - additional labels to be attached to the alert
+      labels:
+        severity: 'info'
+        state: '{{ $value }}'
