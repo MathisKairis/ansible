@@ -1,0 +1,208 @@
+- import_playbook: ../preparationServer/compilationVariables.yml
+# Part 1: Tasks to be performed locally
+- name: Run tasks locally
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  become: yes
+  vars:
+    git_path: "{{ playbook_dir }}/files"
+    tmp_dir: "/tmp/readytofight"
+    preparesrvok_path: "/tmp/.privatevar/{{ semaphore_vars.task_details.id }}/staticVariables.json"
+  tasks:
+    - name: Include vars
+      ansible.builtin.include_vars:
+        file: "{{ preparesrvok_path }}"
+
+    - name: Clean up the temporary directory before starting
+      file:
+        path: "{{ tmp_dir }}"
+        state: absent
+
+    - name: Ensures work tree directories exist
+      file:
+        path: "{{ item }}"
+        state: directory
+      loop:
+        - "{{ tmp_dir }}/readytofight/"
+
+    - name: Copy files to readytofight
+      copy:
+        src: "{{ git_path }}/{{ item }}"
+        dest: "{{ tmp_dir }}/readytofight/"
+      loop:
+        - "sshbanner"
+        - "motd"
+        - "nginx.conf"
+        - "firewall.sh"
+        - "rsyslog.conf"
+        - "authorized_keys"
+
+    - name: Configure zabbix configuration with var
+      template:
+        src: "{{ git_path }}/zabbix_agent2.conf.j2"
+        dest: "{{ tmp_dir }}/readytofight/zabbix_agent2.conf"
+        mode: 0644
+
+- name: "Copy binary file to target servers {{ target_hosts }}"
+  hosts: "{{ target_hosts }}"
+  become: true
+  gather_facts: no
+  vars:
+    preparesrvok_path: "/tmp/.privatevar/{{ semaphore_vars.task_details.id }}/staticVariables.json"
+  tasks:
+    - name: Include vars
+      ansible.builtin.include_vars:
+        file: "{{ preparesrvok_path }}"
+
+    - name: Check if Zabbix agent is installed
+      package_facts:
+      
+    - name: Check if Wazuh agent is installed
+      package_facts:
+
+    - name: Download deb files if not installed
+      get_url:
+        url: "{{ item.url }}"
+        dest: "/tmp/{{ item.name }}"
+      when:
+        - (item.name == "zabbix-agent.deb" and ansible_facts.packages['zabbix-agent'] is not defined)
+        - (item.name == "wazuh-agent.deb" and ansible_facts.packages['wazuh-agent'] is not defined)
+      loop:
+        - { url: "{{ prepareserver.zabbix_download_url }}", name: "zabbix-agent.deb" }
+        - { url: "{{ prepareserver.wazuh_download_url }}", name: "wazuh-agent.deb" }
+
+    - name: Install deb files if not installed
+      apt:
+        deb: "/tmp/{{ item.name }}"
+      when:
+        - (item.name == "zabbix-agent.deb" and ansible_facts.packages['zabbix-agent'] is not defined)
+        - (item.name == "wazuh-agent.deb" and ansible_facts.packages['wazuh-agent'] is not defined)
+      loop:
+        - { name: "zabbix-agent.deb" }
+        - { name: "wazuh-agent.deb" }
+      environment:
+        WAZUH_MANAGER: "{{ prepareserver.wazuh_manager }}"
+        WAZUH_AGENT_GROUP: "{{ prepareserver.wazuh_agent_group}}"
+        WAZUH_AGENT_NAME: "{{ prepareserver.wazuh_agent_name }}"
+        
+    - name: apt update
+      apt:
+        update_cache: yes
+      
+    - name: apt upgrade
+      apt:
+        upgrade: dist
+
+    - name: Install some packages
+      apt:
+        name:
+          - nginx
+          - npm
+          - nodejs
+          - net-tools
+          - jq 
+          - wireguard
+          - zabbix-agent2
+          - zabbix-agent2-plugin-*
+          - ufw
+        
+    - name: Disable apt autoupgrade 
+      apt:
+        name: unattended-upgrades
+        state: absent
+        
+    - name: Configure ssh banner
+      lineinfile:
+        path: "/etc/ssh/sshd_config"
+        regex: "^(#)?Banner"
+        line: "Banner /etc/ssh/banner"
+        state: present
+      
+    - name: ssh restart
+      ansible.builtin.service:
+        name: ssh
+        state: restarted
+        enabled: true 
+
+    - name: Copy ready to figh to final dest
+      ansible.builtin.copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: "{{ item.owner }}"
+        group: "{{ item.group }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - { src: "{{ tmp_dir }}/readytofight/sshbanner", dest: "/etc/ssh/banner", mode: "0644", owner: "root", group: "root" }
+        - { src: "{{ tmp_dir }}/readytofight/motd", dest: "/etc/motd", mode: "0644", owner: "root", group: "root" }
+        - { src: "{{ tmp_dir }}/readytofight/nginx.conf", dest: "/etc/nginx/nginx.conf", mode: "0644", owner: "root", group: "root" }
+        - { src: "{{ tmp_dir }}/readytofight/firewall.sh", dest: "/root/firewall.sh", mode: "0755", owner: "root", group: "root" }
+        - { src: "{{ tmp_dir }}/readytofight/zabbix_agent2.conf", dest: "/etc/zabbix/zabbix_agent2.conf", mode: "0644", owner: "root", group: "root" }
+        - { src: "{{ tmp_dir }}/readytofight/rsyslog.conf", dest: "/etc/rsyslog.conf", mode: "0644", owner: "root", group: "root" }
+        - { src: "{{ tmp_dir }}/readytofight/authorized_keys", dest: "/home/ubuntu/.ssh/authorized_keys", mode: "0600", owner: "ubuntu", group: "ubuntu" }
+
+      # Reload nginx & zabbix
+    - name: Restart nginx / zabbix-agent2 / wazuh / rsyslog
+      ansible.builtin.service:
+        name: "{{ item }}"
+        state: restarted
+        enabled: true
+      loop:
+        - nginx
+        - zabbix-agent2
+        - wazuh-agent
+        - rsyslog
+
+    - name: Set server hostname
+      hostname:
+        name: "{{ prepareserver.hostname }}"
+
+    - name: Check if swap file exist 
+      stat:
+        path: /swapfile.img
+      register: stat_swapfile
+
+    - name: Create swapfile with command falocate
+      command: fallocate -l 5G /swapfile.img
+      when: stat_swapfile.stat.exists == False
+
+    - name: Change swap file permissions
+      file:
+        path: "/swapfile.img"
+        owner: root
+        group: root
+        mode: 0600
+      when: stat_swapfile.stat.exists == False
+        
+    - name: Set up the swap space
+      command: mkswap /swapfile.img
+      when: stat_swapfile.stat.exists == False
+    
+    - name: Write swap entry in fstab
+      mount: 
+        name: none
+        src: /swapfile.img
+        fstype: swap
+        opts: sw
+        passno: 0
+        dump: 0
+        state: present
+      when: stat_swapfile.stat.exists == False
+
+    - name: Mount swap
+      command: "swapon /swapfile.img"
+      when: stat_swapfile.stat.exists == False
+
+    - name: Configure ufw configuration file
+      lineinfile:
+        path: /etc/ufw/ufw.conf
+        regex: "^(#)?{{ item.var }}"
+        line: "{{ item.var }}={{ item.value }}"
+        state: present
+      loop:
+        - { var: "ENABLED", value: "yes" }
+        - { var: "LOGLEVEL", value: "OFF" }
+
+
+    - name: Execute firewall script
+      command: /root/firewall.sh
